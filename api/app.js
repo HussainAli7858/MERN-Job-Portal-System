@@ -5,6 +5,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import ApiError from "./utils/ApiError.js";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.use(cookieParser());
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
+
+// Routes
+app.use("/api/auth", authRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
