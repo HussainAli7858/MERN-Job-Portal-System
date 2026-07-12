@@ -3,6 +3,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { registerAccount, loginAccount } from "../services/auth.service.js";
 import authenticate from "../middlewares/auth.middleware.js";
+import { refreshAccessToken } from "../services/token.service.js";
 
 const cookieOptions = {
   httpOnly: true, // JS on the browser cannot access this cookie — prevents XSS
@@ -75,4 +76,37 @@ export const logout = asyncHandler(async (req, res) => {
     .clearCookie("accessToken", cookieOptions)
     .clearCookie("refreshToken", cookieOptions)
     .json(new ApiResponse(200, "Logged out successfully", null));
+});
+
+
+export const refreshToken = asyncHandler(async (req, res) => {
+  // Get refresh token from cookie or body
+  const incomingRefreshToken =
+    req.cookies?.refreshToken || req.body?.refreshToken;
+
+  const { newAccessToken, newRefreshToken } = await refreshAccessToken(
+    incomingRefreshToken
+  );
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", newAccessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    })
+    .cookie("refreshToken", newRefreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    })
+    .json(
+      new ApiResponse(200, "Tokens refreshed successfully", {
+        accessToken: newAccessToken,
+      })
+    );
 });
