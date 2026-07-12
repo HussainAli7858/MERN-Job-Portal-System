@@ -1,6 +1,8 @@
+import Account from "../models/account.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { registerAccount, loginAccount } from "../services/auth.service.js";
+import authenticate from "../middlewares/auth.middleware.js";
 
 const cookieOptions = {
   httpOnly: true, // JS on the browser cannot access this cookie — prevents XSS
@@ -47,4 +49,30 @@ export const login = asyncHandler(async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     .json(new ApiResponse(200, "Login successful", { account: safeAccount, accessToken }));
+});
+
+
+export const getMe = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Account fetched successfully", req.account));
+});
+
+// POST /api/auth/logout — logout current user
+export const logout = asyncHandler(async (req, res) => {
+  // Clear refresh token from DB
+  await Account.findByIdAndUpdate(req.account._id, { refreshToken: null });
+
+  // Clear cookies
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .json(new ApiResponse(200, "Logged out successfully", null));
 });
