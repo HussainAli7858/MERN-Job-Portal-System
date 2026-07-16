@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import Account from "../models/account.model.js";
 import ApiError from "../utils/ApiError.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.utils.js";
+import { sendVerificationEmail } from "./email.service.js";
 
 export const registerAccount = async ({ firstName, lastName, email, password, role }) => {
   const existingAccount = await Account.findOne({ email });
@@ -8,19 +10,33 @@ export const registerAccount = async ({ firstName, lastName, email, password, ro
     throw new ApiError(409, "An account with this email already exists");
   }
 
+  const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+  const emailVerificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); 
+
   const account = await Account.create({
     firstName,
     lastName,
     email,
     password,
     role: role || "applicant",
+    emailVerificationToken,
+    emailVerificationExpiry,
   });
+
+  try {
+    await sendVerificationEmail({
+      email: account.email,
+      firstName: account.firstName,
+      token: emailVerificationToken,
+    });
+  } catch (error) {
+    console.error("Failed to send verification email:", error.message);
+  }
 
   return account;
 };
 
 export const loginAccount = async ({ email, password }) => {
-  // Explicitly select password since model has select:false
   const account = await Account.findOne({ email }).select("+password");
 
   if (!account) {

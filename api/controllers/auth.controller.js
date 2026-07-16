@@ -110,3 +110,32 @@ export const refreshToken = asyncHandler(async (req, res) => {
       })
     );
 });
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    throw new ApiError(400, "Verification token is required");
+  }
+
+  // Find account with this token that hasn't expired
+  const account = await Account.findOne({
+    emailVerificationToken: token,
+    emailVerificationExpiry: { $gt: new Date() }, // token must not be expired
+  });
+
+  if (!account) {
+    throw new ApiError(400, "Invalid or expired verification token");
+  }
+
+  // Mark email as verified and clear the token
+  await Account.findByIdAndUpdate(account._id, {
+    isEmailVerified: true,
+    emailVerificationToken: null,
+    emailVerificationExpiry: null,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Email verified successfully", null));
+});
