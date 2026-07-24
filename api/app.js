@@ -7,6 +7,7 @@ import errorMiddleware from "./middlewares/error.middleware.js";
 import ApiError from "./utils/ApiError.js";
 import authRoutes from "./routes/auth.routes.js";
 import companyRoutes from "./routes/company.routes.js";
+import jobRoutes from "./routes/job.routes.js";
 
 const app = express();
 
@@ -34,6 +35,7 @@ if (process.env.NODE_ENV === "development") {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/companies", companyRoutes);
+app.use("/api/jobs", jobRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
